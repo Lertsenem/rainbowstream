@@ -1,3 +1,4 @@
+import _thread
 import os
 import os.path
 import sys
@@ -7,10 +8,13 @@ import time
 import threading
 import requests
 import webbrowser
+import tempfile
 import traceback
 import pkg_resources
+import shutil
 import socks
 import socket
+import subprocess
 import re
 
 from io import BytesIO
@@ -734,7 +738,8 @@ def show():
         tweet = t.statuses.show(id=tid)
 
         if target in [ 'image' ]:
-            show_image( tweet )
+            _thread.start_new_thread( show_image, (tweet,) )
+            #show_image( tweet )
         if target in [ 'url', 'urls', 'link', 'links' ]:
             show_url( tweet )
 
@@ -750,12 +755,23 @@ def show_image(tweet):
     Show image
     """
 
-    media = tweet['entities']['media']
+    try:
+        media = tweet['extended_entities']['media']
+    except:
+        media = tweet['entities']['media']
+
+    tmpdir = tempfile.mkdtemp(suffix=".rainbowstream")
 
     for m in media:
         res = requests.get(m['media_url'])
         img = Image.open(BytesIO(res.content))
-        img.show()
+        _,tmpfile = tempfile.mkstemp(suffix=".jpg",dir=tmpdir)
+        img.save(tmpfile)
+
+    subprocess.call([ "xv", tmpfile ])
+
+    shutil.rmtree( tmpdir, ignore_errors=True )
+
 
 
 def show_url(tweet):
