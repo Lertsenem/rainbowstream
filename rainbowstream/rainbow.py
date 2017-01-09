@@ -739,7 +739,6 @@ def show():
 
         if target in [ 'image' ]:
             _thread.start_new_thread( show_image, (tweet,) )
-            #show_image( tweet )
         if target in [ 'url', 'urls', 'link', 'links' ]:
             show_url( tweet )
 
@@ -756,21 +755,32 @@ def show_image(tweet):
     """
 
     try:
-        media = tweet['extended_entities']['media']
+
+        try:
+            try:
+                media = tweet['extended_entities']['media']
+            except:
+                media = tweet['entities']['media']
+        except:
+            try:
+                media = tweet['retweeted_status']['extended_entities']['media']
+            except:
+                media = tweet['retweeted_status']['entities']['media']
+
+        tmpdir = tempfile.mkdtemp(suffix=".rainbowstream")
+
+        for m in media:
+            res = requests.get(m['media_url'])
+            img = Image.open(BytesIO(res.content))
+            _,tmpfile = tempfile.mkstemp(suffix=".jpg",dir=tmpdir)
+            img.save(tmpfile)
+
+        subprocess.call([ "xv", tmpfile ])
+
+        shutil.rmtree( tmpdir, ignore_errors=True )
+
     except:
-        media = tweet['entities']['media']
-
-    tmpdir = tempfile.mkdtemp(suffix=".rainbowstream")
-
-    for m in media:
-        res = requests.get(m['media_url'])
-        img = Image.open(BytesIO(res.content))
-        _,tmpfile = tempfile.mkstemp(suffix=".jpg",dir=tmpdir)
-        img.save(tmpfile)
-
-    subprocess.call([ "xv", tmpfile ])
-
-    shutil.rmtree( tmpdir, ignore_errors=True )
+        printNicely(red('Sorry, I can\'t show this.'))
 
 
 
